@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-type YouTubePlayerProps = {
+export type YouTubePlayerProps = {
   videoId: string;
   className?: string;
   onTimeUpdate?: (time: number) => void;
+  onPlayerReady?: (player: YT.Player) => void;
 };
 
 function useYoutubeEnv() {
@@ -38,10 +39,12 @@ function useYoutubeEnv() {
 
   return initialized;
 }
+
 export default function YouTubePlayer({
   videoId,
   className,
   onTimeUpdate,
+  onPlayerReady,
 }: YouTubePlayerProps) {
   const playerAnchor = useRef<HTMLDivElement>(null);
   const initialized = useYoutubeEnv();
@@ -57,7 +60,7 @@ export default function YouTubePlayer({
       height: "100%",
       width: "100%",
       videoId: videoId,
-      host: "https://www.youtube.com",
+      // host: "https://www.youtube.com",
     });
 
     let handle = 0;
@@ -73,6 +76,7 @@ export default function YouTubePlayer({
         }
       }
     );
+    onPlayerReady?.(player);
     return () => {
       player.destroy();
       // remove all children
@@ -81,6 +85,6 @@ export default function YouTubePlayer({
       }
       clearInterval(handle);
     };
-  }, [initialized, videoId, onTimeUpdate]);
+  }, [initialized, videoId, onTimeUpdate, onPlayerReady]);
   return <div ref={playerAnchor} className={className}></div>;
 }

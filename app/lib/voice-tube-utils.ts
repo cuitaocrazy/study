@@ -1,14 +1,28 @@
 import vm from "vm";
 
-export async function getSubtitles(url: string): Promise<
-  {
+export function getYoutubeVideoId(url: string): string {
+  const reg = /https:\/\/www.youtube.com\/watch\?v=(.*)/;
+
+  const match = url.match(reg);
+
+  if (!match) {
+    throw new Error("No match");
+  }
+
+  return match[1];
+}
+
+export async function getVideoInfo(url: string): Promise<{
+  url: string;
+  title: string;
+  subtitles: {
     en: string;
     cn: string;
     startTime: number;
     endTime: number;
     orderId: number;
-  }[]
-> {
+  }[];
+}> {
   const html = await fetch(url).then((res) => res.text());
 
   const reg = /<script>window\.__NUXT__=(.*?)<\/script>/m;
@@ -43,5 +57,9 @@ export async function getSubtitles(url: string): Promise<
     })
   );
 
-  return subtitles;
+  return {
+    url: data.data[0].video.youtubeUrl,
+    title: data.data[0].video.title,
+    subtitles,
+  };
 }

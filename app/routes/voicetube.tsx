@@ -1,33 +1,73 @@
-import type { ActionFunctionArgs } from "@remix-run/node";
+import { json, type ActionFunctionArgs, redirect } from "@remix-run/node";
 import z from "zod";
 import { parse } from "@conform-to/zod";
-import { Form } from "@remix-run/react";
+import { useForm } from "@conform-to/react";
+import { Form, useActionData } from "@remix-run/react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
+import { getVideoInfo } from "~/lib/voice-tube-utils";
+import { PrismaClient } from "@prisma/client";
 
 const VoiceTubeUrlFormSchema = z.object({
   url: z.string().url(),
 });
 
 export async function action({ request }: ActionFunctionArgs) {
-  console.log(request);
   const formData = await request.formData();
-  const obj = Object.fromEntries(formData.entries());
-  console.log(Array.from(formData.entries()));
-  console.log(formData.get("url"));
-  console.log(VoiceTubeUrlFormSchema.parse(obj));
-  console.log(parse(formData, { schema: VoiceTubeUrlFormSchema }));
-  return null;
+  const submission = parse(formData, { schema: VoiceTubeUrlFormSchema });
+
+  if (!submission.value || submission.intent !== "submit") {
+    return json({ status: "error", submission } as const);
+  }
+
+  const videoInfo = await getVideoInfo(submission.value.url);
+
+  const prisma = new PrismaClient();
+  const result = await prisma.videos.create({
+    data: {
+      title: videoInfo.title,
+      originalUrl: videoInfo.url,
+      subtitles: {
+        create: videoInfo.subtitles.map((subtitle) => ({
+          orderId: subtitle.orderId,
+          en: subtitle.en,
+          cn: subtitle.cn,
+          startTime: subtitle.startTime,
+          endTime: subtitle.endTime,
+        })),
+      },
+    },
+  });
+
+  return redirect(`/video/${result.id}`);
 }
 
 export default function VoiceTube() {
+  const actionData = useActionData<typeof action>();
+  const [form, { url }] = useForm({
+    lastSubmission: actionData?.submission,
+    onValidate({ formData }) {
+      return parse(formData, { schema: VoiceTubeUrlFormSchema });
+    },
+  });
   return (
-    <Form method="POST">
-      <Label htmlFor="url">VoiceTube URL</Label>
-      <Input id="url" name="url" type="url" />
-      <Input name="url" type="url" />
-      <Button type="submit">Submit</Button>
-    </Form>
+    <div className="flex justify-center">
+      <Form method="POST" className=" w-96" {...form.props}>
+        <div className="space-y-2">
+          <Label htmlFor="url">VoiceTube URL</Label>
+          <div className="flex space-x-2">
+            <Input
+              name={url.name}
+              defaultValue="https://tw.voicetube.com/videos/177360"
+            />
+            <Button className="w-24" type="submit">
+              导入
+            </Button>
+          </div>
+          <p className="text-sm font-medium text-destructive">{url.error}</p>
+        </div>
+      </Form>
+    </div>
   );
 }
