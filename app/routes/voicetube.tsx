@@ -2,7 +2,7 @@ import { json, type ActionFunctionArgs, redirect } from "@remix-run/node";
 import z from "zod";
 import { parse } from "@conform-to/zod";
 import { useForm } from "@conform-to/react";
-import { Form, useActionData } from "@remix-run/react";
+import { useActionData, useFetcher, useNavigation } from "@remix-run/react";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
@@ -51,9 +51,14 @@ export default function VoiceTube() {
       return parse(formData, { schema: VoiceTubeUrlFormSchema });
     },
   });
-  return (
+  const fetcher = useFetcher();
+  const navigation = useNavigation();
+
+  return fetcher.state !== "idle" || navigation.state === "loading" ? (
+    <div>submitting</div>
+  ) : (
     <div className="flex justify-center">
-      <Form method="POST" className=" w-96" {...form.props}>
+      <fetcher.Form method="POST" className=" w-96" {...form.props}>
         <div className="space-y-2">
           <Label htmlFor="url">VoiceTube URL</Label>
           <div className="flex space-x-2">
@@ -67,7 +72,7 @@ export default function VoiceTube() {
           </div>
           <p className="text-sm font-medium text-destructive">{url.error}</p>
         </div>
-      </Form>
+      </fetcher.Form>
     </div>
   );
 }

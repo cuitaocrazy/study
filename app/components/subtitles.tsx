@@ -1,6 +1,8 @@
 import { Separator } from "~/components/ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
 import { useEffect, useRef } from "react";
+import { Button } from "./ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 export type SubtitlesProps = {
   currentTime: number;
@@ -13,6 +15,32 @@ export type SubtitlesProps = {
     cn: string | null;
   }[];
 };
+
+function getEnWordPopvers(en: string) {
+  const words = en.split(" ");
+
+  return words.map((word, idx) => {
+    return (
+      <div key={idx} className=" inline">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="link"
+              key={idx}
+              className="p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              {word + " "}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto">{word}</PopoverContent>
+        </Popover>
+      </div>
+    );
+  });
+}
 
 export default function Subtitles({
   currentTime,
@@ -75,7 +103,7 @@ export default function Subtitles({
             className={idx === currentIndex ? "font-bold" : ""}
             onClick={() => onChangeTime?.(subtitle.startTime)}
           >
-            <div>{subtitle.en}</div>
+            <div className="space-x-1">{...getEnWordPopvers(subtitle.en)}</div>
             <div className="text-sm text-muted-foreground">{subtitle.cn}</div>
             <Separator />
           </li>
